@@ -1,0 +1,20 @@
+name: bsnn
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+  - pyg
+dependencies:
+  - python=3.9.9
+  - pip=21.3.1
+  - pytorch=1.11.0
+  - cudatoolkit=10.2
+  - pyg=2.0.4
+  - pip:
+      - wandb==0.13.1
+      - tqdm==4.62.3
+      - torchdiffeq==0.2.2
+      - pytest==6.2.5
+      - networkx==2.6.3
+      - torch-householder==1.0.1
+      - numpy==1.26.4
