@@ -2,7 +2,7 @@
 
 This repository contains the code for the paper 
 **[Bayesian Sheaf Neural Networks]()**.
-![Sheaf Neural Networks](figures/bsnn.png)
+<img src="figures/bsnn.png" alt="Bayesian Sheaf Neural Networks" width="500"/>
 
 ## Getting started
 
@@ -10,7 +10,7 @@ To set up the environment, run the following command:
 
 ```bash
 conda env create --file=environment.yml
-conda activate nsd
+conda activate bsnn
 ```
 
 ### Run Hyperparameter Sweep
