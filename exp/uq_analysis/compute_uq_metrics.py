@@ -1,132 +1,154 @@
-import os
-import torch
-import numpy as np
-import yaml
-import pandas as pd
+import sys, os, yaml, torch, numpy as np, pandas as pd
 from tqdm import tqdm
 from scipy.stats import entropy
+from sklearn.calibration import calibration_curve
+
+# --- Project paths ---
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, PROJECT_ROOT); sys.path.append(os.path.join(PROJECT_ROOT, "lib"))
+
 from utils.heterophilic import get_dataset, get_fixed_splits
 from models.bayes_disc_models import (
-    BayesDiagSheafDiffusion,
-    BayesBundleSheafDiffusion,
-    BayesGeneralSheafDiffusion,
+    BayesDiagSheafDiffusion, BayesBundleSheafDiffusion, BayesGeneralSheafDiffusion
 )
 
 model_class_map = {
     'BayesDiagSheaf': BayesDiagSheafDiffusion,
     'BayesBundleSheaf': BayesBundleSheafDiffusion,
-    'BayesGeneralSheaf': BayesGeneralSheafDiffusion,
+    'BayesGeneralSheaf': BayesGeneralSheafDiffusion
 }
 
-def compute_ece(confidences, predictions, labels, n_bins=15):
-    bin_boundaries = np.linspace(0, 1, n_bins + 1)
+def ece_score(conf, pred, true, n_bins=15):
+    bins = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
     for i in range(n_bins):
-        bin_lower = bin_boundaries[i]
-        bin_upper = bin_boundaries[i + 1]
-        in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
-        if np.sum(in_bin) > 0:
-            bin_accuracy = np.mean(predictions[in_bin] == labels[in_bin])
-            bin_confidence = np.mean(confidences[in_bin])
-            ece += (np.sum(in_bin) / len(confidences)) * abs(bin_confidence - bin_accuracy)
+        lo, hi = bins[i], bins[i + 1]
+        mask = (conf >= lo) & ((conf < hi) if i < n_bins - 1 else (conf <= hi))
+        if mask.any():
+            acc = np.mean(pred[mask] == true[mask])
+            cal = np.mean(conf[mask])
+            ece += mask.mean() * abs(cal - acc)
     return ece
 
-def main():
-    all_datasets = ["cora", "pubmed", "texas", "film", "wisconsin", "cornell", "citeseer"]
-    all_models = ["BayesDiagSheaf", "BayesGeneralSheaf", "BayesBundleSheaf"]
+@torch.no_grad()
+def mc_sample_probs(model, data_x, S):
+    """
+    Returns probs of shape [S, N, C]. Tries true posterior sampling, else MC-dropout, else deterministic.
+    """
+    probs = []
+    # Prefer explicit posterior sampling if the model provides it
+    has_sampler = hasattr(model, "sample_posterior_")
+    has_mcdo   = hasattr(model, "enable_mc_dropout") or hasattr(model, "mc_dropout")
+    for _ in range(S):
+        if has_sampler:
+            model.sample_posterior_()
+            model.eval()
+        elif has_mcdo:
+            # keep dropout active without changing BN stats (no BN in many GNNs; if present, consider eval-BN)
+            if hasattr(model, "enable_mc_dropout"): model.enable_mc_dropout()
+            model.train()
+        else:
+            model.eval()
+        logits = model(data_x)[0]              
+        p = torch.softmax(logits, dim=1).cpu().numpy()
+        probs.append(p)
+    return np.stack(probs, axis=0)              
 
-    for model_name in all_models:
-        for dataset_name in all_datasets:
-            yaml_path = f"config/{dataset_name}_{model_name}_30.yml"
-            if not os.path.exists(yaml_path):
-                print(f"Config not found: {yaml_path}, skipping.")
-                continue
+all_datasets = ["cora", "pubmed", "texas", "film", "wisconsin", "cornell", "citeseer"]
 
-            try:
-                with open(yaml_path, "r") as f:
-                    sweep_cfg = yaml.safe_load(f)
-                params = sweep_cfg["parameters"]
-                seeds = params["seed"]["values"]
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-                dataset = get_dataset(dataset_name)
-                config_dict = {
-                    key: val.get('value', val) if isinstance(val, dict) else val
-                    for key, val in params.items()
-                }
-                config_dict.update({
-                    'input_dim': dataset.num_features,
-                    'output_dim': dataset.num_classes,
-                    'model': model_name,
-                    'dataset': dataset_name,
-                    'device': device,
-                    'graph_size': dataset[0].x.size(0),
-                    'deg_normalised': False,
-                    'linear': False,
-                    'second_linear': False,
-                    'sheaf_act': "tanh",
-                    'sparse_learner': False,
-                    'max_t': 1.0
-                })
+for dataset_name in all_datasets:
+    yaml_path = f"config/bayesgen/{dataset_name}_bayesgen_30.yml"
+    if not os.path.exists(yaml_path):
+        print(f"YAML not found: {yaml_path}"); continue
 
-                model_cls = model_class_map[model_name]
-                all_entropy, all_variance, all_mi, all_correct = [], [], [], []
-                all_pred_labels, all_true_labels = [], []
+    try:
+        sweep_cfg = yaml.safe_load(open(yaml_path, "r"))
+        params = sweep_cfg["parameters"]
+        seeds = params["seed"]["values"]
+        model_name = params["model"]["value"]
+        dataset = get_dataset(dataset_name)
+        data = dataset[0]
+        # fixed split id 0; keep masks stable across seeds for eval
+        data = get_fixed_splits(data, dataset_name, 0, params.get('permute_masks', False)).to(device)
 
-                for seed in tqdm(seeds, desc=f"{model_name} - {dataset_name}"):
-                    model_path = f"saved_models/{model_name}/{dataset_name}/{dataset_name}_{model_name}_seed{seed}.pt"
-                    data = dataset[0]
-                    data = get_fixed_splits(data, dataset_name, 0, config_dict['permute_masks']).to(device)
+        config_dict = {k: (v['value'] if isinstance(v, dict) and 'value' in v else v) for k, v in params.items()}
+        config_dict.update({
+            'input_dim': dataset.num_features,
+            'output_dim': dataset.num_classes,
+            'model': model_name,
+            'dataset': dataset_name,
+            'device': device,
+            'graph_size': data.x.size(0),
+            'deg_normalised': False,
+            'linear': False,
+            'second_linear': False,
+            'sheaf_act': "tanh",
+            'sparse_learner': False,
+            'max_t': 1.0
+        })
+        S_per_model = int(config_dict.get('num_ensemble', 1))
+        model_cls = model_class_map[model_name]
 
-                    model = model_cls(data.edge_index, config_dict).to(device)
-                    model.load_state_dict(torch.load(model_path, map_location=device))
-                    model.eval()
+        test_idx = data.test_mask.cpu().numpy().nonzero()[0]
+        y_true = data.y[test_idx].cpu().numpy()
 
-                    with torch.no_grad():
-                        probs_list = [torch.softmax(model(data.x)[0], dim=1).cpu().numpy()
-                                      for _ in range(config_dict['num_ensemble'])]
+        # --- collect posterior samples across all seeds/models ---
+        samples_all = []  # list of [S, n_test, C]
+        for seed in tqdm(seeds, desc=f"{dataset_name} seeds"):
+            model_path = f"saved_models/{model_name}/{dataset_name}/{dataset_name}_{model_name}_seed{seed}.pt"
+            model = model_cls(data.edge_index, config_dict).to(device)
+            state = torch.load(model_path, map_location=device)
+            model.load_state_dict(state); model.eval()
 
-                    probs_array = np.stack(probs_list)
-                    test_idx = data.test_mask.cpu().numpy().nonzero()[0]
-                    probs_test = probs_array[:, test_idx, :]
+            probs = mc_sample_probs(model, data.x, S=S_per_model)         
+            probs_test = probs[:, test_idx, :]                       
+            samples_all.append(probs_test)
 
-                    mean_probs = probs_test.mean(axis=0)
-                    entropy_vals = entropy(mean_probs.T)
-                    variance_vals = np.var(probs_test, axis=0).mean(axis=1)
+        probs_test = np.concatenate(samples_all, axis=0)                   
+        assert np.allclose(probs_test.sum(axis=-1), 1.0, atol=1e-6)
 
-                    ens_mean_entropy = entropy(np.mean(probs_test, axis=0).T)
-                    mean_ens_entropy = np.mean([entropy(p.T) for p in probs_test], axis=0)
-                    mutual_info = ens_mean_entropy - mean_ens_entropy
+        # --- predictive stats ---
+        mean_probs = probs_test.mean(axis=0)                        
+        ent_mean = entropy(mean_probs.T)                                  
+        ent_each = np.array([entropy(p.T) for p in probs_test])           
+        mi = ent_mean - ent_each.mean(axis=0)                            
+        var_prob = probs_test.var(axis=0).mean(axis=1)                    
 
-                    pred_labels = mean_probs.argmax(axis=1)
-                    true_labels = data.y[test_idx].cpu().numpy()
-                    correct_flags = (true_labels == pred_labels).astype(int)
+        y_pred = mean_probs.argmax(axis=1)
+        conf = mean_probs.max(axis=1)
+        correct = (y_pred == y_true).astype(int)
 
-                    all_entropy.extend(entropy_vals)
-                    all_variance.extend(variance_vals)
-                    all_mi.extend(mutual_info)
-                    all_correct.extend(correct_flags)
-                    all_pred_labels.extend(pred_labels)
-                    all_true_labels.extend(true_labels)
+        # top-k coverage and sharpness from predictive mean
+        k = 3
+        topk = np.argsort(mean_probs, axis=1)[:, -k:]
+        topk_cov = np.mean([y_true[i] in topk[i] for i in range(len(y_true))])
+        sharpness = conf.mean()
 
-                output_dir = f"uq/{model_name}/{dataset_name}"
-                os.makedirs(output_dir, exist_ok=True)
-                pd.DataFrame({
-                    "true_label": all_true_labels,
-                    "predicted_label": all_pred_labels,
-                    "correct": all_correct,
-                    "entropy": all_entropy,
-                    "variance": all_variance,
-                    "mutual_information": all_mi
-                }).to_csv(f"{output_dir}/uq_results.csv", index=False)
+        # --- calibration ---
+        ece = ece_score(conf, y_pred, y_true, n_bins=15)
+        # For plotting calibration curve if desired:
+        correct_bin = (y_pred == y_true).astype(int)
+        prob_true, prob_pred = calibration_curve(correct_bin, conf, n_bins=15, strategy="uniform")
 
-                pred_confidences = mean_probs.max(axis=1)
-                ece = compute_ece(pred_confidences, pred_labels, true_labels)
-                print(f"{model_name} | {dataset_name} — ECE: {ece:.4f}")
+        # --- save per-node table ---
+        output_dir = f"uq/{model_name}/{dataset_name}"
+        os.makedirs(output_dir, exist_ok=True)
+        df = pd.DataFrame({
+            "node_idx": test_idx,
+            "entropy": ent_mean,
+            "mutual_information": mi,
+            "prob_variance_mean": var_prob,
+            "confidence": conf,
+            "pred": y_pred,
+            "true": y_true,
+            "correct": correct
+        })
+        df.to_csv(f"{output_dir}/uq_results2.csv", index=False)
 
-            except Exception as e:
-                print(f"Skipping {model_name} - {dataset_name} due to error: {e}")
-                continue
+        # --- summary ---
+        print(f"[{dataset_name}] n_test={len(y_true)}  ECE={ece:.4f}  Top-{k}={topk_cov:.4f}  Sharpness={sharpness:.4f}")
 
-if __name__ == "__main__":
-    main()
+    except Exception as e:
+        print(f"Skipping {dataset_name}: {e}")
