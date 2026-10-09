@@ -16,5 +16,4 @@ dependencies:
       - torchdiffeq==0.2.2
       - pytest==6.2.5
       - networkx==2.6.3
-      - torch-householder==1.0.1
       - numpy==1.26.4

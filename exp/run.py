@@ -5,6 +5,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import sys
+from copy import deepcopy
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import random
 import torch
 import torch.nn.functional as F
@@ -31,7 +34,7 @@ def reset_wandb_env():
 def train(model, optimizer, data, config, epoch):
     model.train()
     optimizer.zero_grad()
-    beta = torch.sigmoid(torch.tensor((epoch % 40) / 2 - 10))
+    beta = torch.sigmoid(data.x.new_tensor((epoch % 40) / 2 - 10))
 
     if config.bayes_model:
         out, kl = model(data.x)
@@ -79,7 +82,9 @@ def run_exp(config, dataset, model_cls, fold, return_model=False):
         {'params': other_params, 'weight_decay': config.weight_decay}
     ], lr=config.lr)
 
-    best_val_acc = test_acc = 0
+    best_state = None
+    best_val_acc = -float('inf')
+    test_acc = 0
     best_val_loss = float('inf')
     best_epoch = bad_counter = 0
 
@@ -98,8 +103,9 @@ def run_exp(config, dataset, model_cls, fold, return_model=False):
                 f'fold{fold}_kl': kl,
             }, step=epoch)
 
-        new_best = val_acc > best_val_acc if config.stop_strategy == 'acc' else val_loss < best_val_loss
+        new_best = best_state is None or (val_acc > best_val_acc if config.stop_strategy == 'acc' else val_loss < best_val_loss)
         if new_best:
+            best_state = deepcopy(model.state_dict())
             best_val_acc, best_val_loss = val_acc, val_loss
             test_acc, best_epoch = tmp_test_acc, epoch
             bad_counter = 0
@@ -108,6 +114,10 @@ def run_exp(config, dataset, model_cls, fold, return_model=False):
 
         if bad_counter >= config.early_stopping:
             break
+
+    if best_state is None:
+        raise ValueError('Training produced no checkpoint; epochs must be positive')
+    model.load_state_dict(best_state)
 
     wandb.log({'best_test_acc': test_acc, 'best_val_acc': best_val_acc, 'best_epoch': best_epoch})
     keep_running = False if test_acc < args['min_acc'] else True
@@ -119,7 +129,10 @@ def run_exp(config, dataset, model_cls, fold, return_model=False):
         os.makedirs(save_dir, exist_ok=True)
         
         save_path = os.path.join(save_dir, f"{args['dataset']}_{args['model']}_seed{args['seed']}.pt")
-        torch.save(model.state_dict(), save_path)
+        torch.save({'state_dict': model.state_dict(),
+                    'config': {k: str(v) if isinstance(v, torch.device) else v for k, v in args.items()},
+                    'split': fixed_seed, 'best_epoch': best_epoch,
+                    'best_val_acc': best_val_acc, 'best_val_loss': float(best_val_loss)}, save_path)
 
     return test_acc, best_val_acc, keep_running
 

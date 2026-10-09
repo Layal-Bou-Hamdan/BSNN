@@ -6,7 +6,7 @@ import math
 import torch
 
 from torch import nn
-from torch_householder import torch_householder_orgqr
+from models.householder import householder_product
 
 
 class Orthogonal(nn.Module):
@@ -64,9 +64,9 @@ class Orthogonal(nn.Module):
                 Id = torch.eye(self.d, dtype=A.dtype, device=A.device)
                 Q = torch.linalg.solve(torch.add(Id, A, alpha=1.0), torch.add(Id, A, alpha=-1.0))
         elif self.orthogonal_map == 'householder':
-            eye = torch.eye(self.d, device=params.device).unsqueeze(0).repeat(params.size(0), 1, 1)
+            eye = torch.eye(self.d, dtype=params.dtype, device=params.device).unsqueeze(0).repeat(params.size(0), 1, 1)
             A = params.tril(diagonal=-1) + eye
-            Q = torch_householder_orgqr(A)
+            Q = householder_product(A)
             if self.d % 2:
                 Q = -1 * Q
         elif self.orthogonal_map == 'euler':
