@@ -55,11 +55,11 @@ class DiscreteDiagSheafDiffusion(SheafDiffusion):
         self.lin2 = nn.Linear(self.hidden_dim, self.output_dim)
 
     def forward(self, x):
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
         if self.second_linear:
             x = self.lin12(x)
         x = x.view(self.graph_size * self.final_d, -1)
@@ -67,12 +67,12 @@ class DiscreteDiagSheafDiffusion(SheafDiffusion):
         x0 = x
         for layer in range(self.layers):
             if layer == 0 or self.nonlinear:
-                x_maps = F.dropout(x, p=self.dropout if layer > 0 else 0., training=self.training)
+                x_maps = F.dropout(x, p=self.dropout if layer > 0 else 0., training=(self.training or self.mc_dropout))
                 maps = self.sheaf_learners[layer](x_maps.reshape(self.graph_size, -1), self.edge_index)
                 L, trans_maps = self.laplacian_builder(maps)
                 self.sheaf_learners[layer].set_L(trans_maps)
 
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
             if self.left_weights:
                 x = x.t().reshape(-1, self.final_d)
@@ -166,11 +166,11 @@ class DiscreteBundleSheafDiffusion(SheafDiffusion):
             weight_learner.update_edge_index(edge_index)
 
     def forward(self, x):
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
         if self.second_linear:
             x = self.lin12(x)
         x = x.view(self.graph_size * self.final_d, -1)
@@ -178,14 +178,14 @@ class DiscreteBundleSheafDiffusion(SheafDiffusion):
         x0, L = x, None
         for layer in range(self.layers):
             if layer == 0 or self.nonlinear:
-                x_maps = F.dropout(x, p=self.dropout if layer > 0 else 0., training=self.training)
+                x_maps = F.dropout(x, p=self.dropout if layer > 0 else 0., training=(self.training or self.mc_dropout))
                 x_maps = x_maps.reshape(self.graph_size, -1)
                 maps = self.sheaf_learners[layer](x_maps, self.edge_index)
                 edge_weights = self.weight_learners[layer](x_maps, self.edge_index) if self.use_edge_weights else None
                 L, trans_maps = self.laplacian_builder(maps, edge_weights)
                 self.sheaf_learners[layer].set_L(trans_maps)
 
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
             x = self.left_right_linear(x, self.lin_left_weights[layer], self.lin_right_weights[layer])
 
@@ -257,11 +257,11 @@ class DiscreteGeneralSheafDiffusion(SheafDiffusion):
         return x
 
     def forward(self, x):
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
         if self.second_linear:
             x = self.lin12(x)
@@ -270,12 +270,12 @@ class DiscreteGeneralSheafDiffusion(SheafDiffusion):
         x0, L = x, None
         for layer in range(self.layers):
             if layer == 0 or self.nonlinear:
-                x_maps = F.dropout(x, p=self.dropout if layer > 0 else 0., training=self.training)
+                x_maps = F.dropout(x, p=self.dropout if layer > 0 else 0., training=(self.training or self.mc_dropout))
                 maps = self.sheaf_learners[layer](x_maps.reshape(self.graph_size, -1), self.edge_index)
                 L, trans_maps = self.laplacian_builder(maps)
                 self.sheaf_learners[layer].set_L(trans_maps)
 
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
             x = self.left_right_linear(x, self.lin_left_weights[layer], self.lin_right_weights[layer])
 

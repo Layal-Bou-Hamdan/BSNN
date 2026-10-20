@@ -1,59 +1,82 @@
-
-
 # Bayesian Sheaf Neural Networks
 
-This repository contains the code for the paper  
-**Bayesian Sheaf Neural Networks** *(currently available on arXiv)*.
+Code for [Bayesian Sheaf Neural Networks](https://arxiv.org/abs/2410.09590).
 
 <img src="figures/bsnn.png" alt="Bayesian Sheaf Neural Networks" width="500"/>
 
-## Getting Started
+## Setup
 
-To set up the environment, run the following:
+The environment for the corrected UQ workflow is recorded in [environment-review.yml](environment-review.yml):
 
 ```bash
-conda env create --file=environment.yml
-conda activate bsnn
+conda env create -f environment-review.yml
+conda activate bsnn-review
+python -m unittest discover -s tests -v
 ```
 
-## Run Hyperparameter Sweep
+This environment uses Python 3.10 and PyTorch 2.5.1 with CUDA 12.1 wheels. The runner also supports CPU execution. The older `environment.yml` remains for historical reference. Exact package versions from the completed runs are recorded in `environment-review-versions.json`.
 
-To run a hyperparameter sweep, first create a [Weights & Biases account](https://wandb.ai/site). Then, authenticate:
+## Uncertainty Experiments
+
+The UQ workflow compares Bayesian sheaf models with corresponding deterministic NSD models and MC-dropout inference from the same NSD checkpoints. Posterior draws within a fitted model remain separate from independent training seeds.
+
+Run a short end-to-end check from the repository root:
 
 ```bash
-wandb online
+python exp/uq_analysis/review_study.py --output review_results/smoke --datasets cornell --depths 2 --seeds 0 --epochs 2 --samples 1 3 10 --device cpu --threads 2
+```
+
+This trains all six model types and generates diagnostic tables/PDFs. 
+
+The full study uses seven datasets, depths 2/4/6, seeds 0–29, and Bayesian/deterministic variants: 3,780 training trials. Each deterministic checkpoint is evaluated normally and with MC dropout, with stochastic budgets up to 100 draws. Inspect the plan, then run the full workload:
+
+```bash
+python exp/uq_analysis/review_study.py --output review_results/full_v2 --plan-only
+python exp/uq_analysis/review_study.py --output review_results/full_v2 --device cuda:0
+```
+
+Completed checkpoints/metrics are reused on restart. Use a new output directory when changing settings. Distributed workers may use disjoint `--task-index` values with the same `--task-count`; create the shared plan first and pass `--no-report` to workers. Do not run overlapping shards.
+
+Generate a report from completed raw experiment outputs:
+
+```bash
+python exp/uq_analysis/review_study.py --output review_results/full_v2 --report-only
+```
+
+Checkpoints are selected by validation. ECE uses 15 uniform bins; summary means weight dataset/depth settings equally. Uncertainty is computed within each fitted model before aggregation across seeds. Metric definitions are in the paper.
+
+## Configurations and result summaries
+
+- `config/paper_uq/`: 21 dataset/Bayesian-family base configurations.
+- `config/review_v2/`: 42 Bayesian/deterministic base configurations and provenance.
+- `splits/paper_48_32_20/`: exact newly generated masks and generation manifest.
+- [results/uq_review/](results/uq_review/): scalar metrics, comparisons, diagnostics and run manifests for all 3,780 trials.
+
+The study uses split 0 of the included masks. These UQ partitions and controlled-depth experiments differ from the original paper experiments. The fixed matched settings originate from supplied Bayesian configurations, rather than an independent tuning search for each baseline. 
+
+The 43 numerically truncated deterministic GeneralSheaf trials retain their best finite validation checkpoint and are flagged in `training_status.csv`. Euler used PyTorch 2.5.1; Isaac used 2.3.0, with both environments recorded in the run manifests. Node-level plots require locally generated raw samples.
+
+Check the published scalar summaries without retraining:
+
+```bash
+python scripts/summarize_uq_results.py
+```
+
+## Gaussian sampling
+
+Diag-BSNN and Gen-BSNN interpret their learned scale parameter as log variance, using `std = torch.exp(0.5 * log_var)` consistently with the Gaussian KL. 
+
+## Hyperparameter sweeps
+
+W&B sweep:
+
+```bash
 wandb login
-```
-
-After logging in, you can launch an example sweep with:
-
-```bash
-export ENTITY=<WANDB_ACCOUNT_ID>
 wandb sweep --project bsnn config/bayesbundle_cora_sweep.yml
-```
-
-This launches a sweep for Bayesian sheaf neural networks with orthogonal restriction maps on the Cora dataset.
-
-## Experimental Setup
-
-All experiments were conducted on a high-performance cluster.  
-Each run used an NVIDIA H100 GPU (80GB HBM3), dual Intel Xeon Platinum 8462Y+ CPUs, and 1.0 TiB of RAM.  
-CUDA version: 12.4  
-Driver version: 550.54.15
-
-## Reproducibility
-
-We ensure reproducibility by fixing random seeds across all experiments.  
-Each reported metric is averaged over 30 independent seeds, with standard deviation reported.  
-All training logs and configurations are saved using `wandb` and `results/`.
-
-To reproduce key results from the paper, use the following scripts:
-
-```bash
-bash scripts/run_cora.sh
-bash scripts/run_pubmed.sh
 ```
 
 ## Acknowledgment
 
-This repository builds upon the open-source codebase from [Neural Sheaf Diffusion](https://github.com/twitter-research/neural-sheaf-diffusion), which is licensed under Apache 2.0.
+This repository builds on [Neural Sheaf Diffusion](https://github.com/twitter-research/neural-sheaf-diffusion), licensed under Apache 2.0.
+
+Codex helped facilitate the experiments.

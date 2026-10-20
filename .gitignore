@@ -5,3 +5,29 @@
 datasets/
 wandb/
 *.DS_Store
+
+# Local training/evaluation artifacts (compact summaries live under results/).
+/logs/
+/review_results/
+/saved_models/
+/saved_models_v2/
+/uq/
+/uq_v2/
+/plots/
+*.pt
+*.pth
+*.out
+*.err
+*.aux
+*.log
+*.zip
+
+# Local manuscript and review materials are not part of the code release.
+/paper.tex
+/paper_revision/
+/uq_revision_preview.tex
+/*.pdf
+/REVIEW_*.md
+/UQ_REPRODUCTION.md
+/config/recovered/
+/config/uq_workers.json

@@ -1,0 +1,636 @@
+{
+  "origin": "New random splits, not recovered original paper masks",
+  "method": "NumPy default_rng(split), shuffle eligible nodes; floor(.48*N), floor(.32*N), remainder test",
+  "counts": [
+    {
+      "dataset": "texas",
+      "split": 0,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 1,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 2,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 3,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 4,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 5,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 6,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 7,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 8,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "texas",
+      "split": 9,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 0,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 1,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 2,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 3,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 4,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 5,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 6,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 7,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 8,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "wisconsin",
+      "split": 9,
+      "total_nodes": 251,
+      "eligible_nodes": 251,
+      "train": 120,
+      "validation": 80,
+      "test": 51
+    },
+    {
+      "dataset": "film",
+      "split": 0,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 1,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 2,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 3,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 4,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 5,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 6,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 7,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 8,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "film",
+      "split": 9,
+      "total_nodes": 7600,
+      "eligible_nodes": 7600,
+      "train": 3648,
+      "validation": 2432,
+      "test": 1520
+    },
+    {
+      "dataset": "cornell",
+      "split": 0,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 1,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 2,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 3,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 4,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 5,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 6,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 7,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 8,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "cornell",
+      "split": 9,
+      "total_nodes": 183,
+      "eligible_nodes": 183,
+      "train": 87,
+      "validation": 58,
+      "test": 38
+    },
+    {
+      "dataset": "citeseer",
+      "split": 0,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 1,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 2,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 3,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 4,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 5,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 6,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 7,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 8,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "citeseer",
+      "split": 9,
+      "total_nodes": 3327,
+      "eligible_nodes": 3312,
+      "train": 1589,
+      "validation": 1059,
+      "test": 664
+    },
+    {
+      "dataset": "pubmed",
+      "split": 0,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 1,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 2,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 3,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 4,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 5,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 6,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 7,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 8,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "pubmed",
+      "split": 9,
+      "total_nodes": 19717,
+      "eligible_nodes": 19717,
+      "train": 9464,
+      "validation": 6309,
+      "test": 3944
+    },
+    {
+      "dataset": "cora",
+      "split": 0,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 1,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 2,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 3,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 4,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 5,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 6,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 7,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 8,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    },
+    {
+      "dataset": "cora",
+      "split": 9,
+      "total_nodes": 2708,
+      "eligible_nodes": 2708,
+      "train": 1299,
+      "validation": 866,
+      "test": 543
+    }
+  ]
+}

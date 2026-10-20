@@ -47,6 +47,8 @@ class SheafDiffusion(nn.Module):
         self.t = args['max_t']
         self.time_range = torch.tensor([0.0, self.t], device=self.device)
         self.laplacian_builder = None
+        self.mc_dropout = False
+        self.legacy_gaussian_scale = args.get('gaussian_scale_convention') == 'legacy_log_std'
 
     def update_edge_index(self, edge_index):
         assert edge_index.max() <= self.graph_size

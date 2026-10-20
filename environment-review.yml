@@ -1,0 +1,20 @@
+name: bsnn-review
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --find-links https://data.pyg.org/whl/torch-2.5.1+cu121.html
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - torch==2.5.1+cu121
+      - torch-geometric==2.7.0
+      - torch-scatter==2.1.2+pt25cu121
+      - torch-sparse==0.6.18+pt25cu121
+      - numpy==2.2.6
+      - scipy==1.15.3
+      - pandas==2.3.3
+      - matplotlib==3.10.7
+      - wandb==0.22.3
+      - GitPython==3.1.45
+      - tqdm

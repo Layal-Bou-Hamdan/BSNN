@@ -69,12 +69,16 @@ def mc_sample_probs(model, data_x, S, indices=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--checkpoints', type=Path, default=ROOT/'saved_models')
-    parser.add_argument('--output', type=Path, default=ROOT/'uq')
-    parser.add_argument('--samples', type=int, default=3, help='Paper uses 3; increase for MC convergence studies')
+    parser.add_argument('--checkpoints', type=Path, default=ROOT/'saved_models_v2')
+    parser.add_argument('--output', type=Path, default=ROOT/'uq_v2')
+    parser.add_argument('--samples', type=int, default=100, help='Historical paper uses 3; default 100 for improved precision')
     parser.add_argument('--seed', type=int, default=0, help='Posterior sampling RNG seed')
+    parser.add_argument('--models', nargs='+', choices=['BayesDiagSheaf', 'BayesBundleSheaf', 'BayesGeneralSheaf'])
+    parser.add_argument('--resume', action='store_true', help='Skip complete trials with matching sampling settings')
     options = parser.parse_args()
     paths = sorted(options.checkpoints.glob('*/*/*.pt'))
+    if options.models:
+        paths = [p for p in paths if p.parent.parent.name in options.models]
     if not paths:
         parser.error(f'No checkpoints in {options.checkpoints}; retrain with --save_model first')
     from utils.heterophilic import get_dataset, get_fixed_splits
@@ -83,32 +87,61 @@ def main():
     classes = dict(zip(['BayesDiagSheaf', 'BayesBundleSheaf', 'BayesGeneralSheaf'],
                        [BayesDiagSheafDiffusion, BayesBundleSheafDiffusion, BayesGeneralSheafDiffusion]))
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    seen = set()
     for path in paths:
         checkpoint = torch.load(path, map_location=device, weights_only=False)
         if not isinstance(checkpoint, dict) or 'config' not in checkpoint:
             raise ValueError(f'{path}: checkpoint lacks training config; recover settings before evaluating')
         cfg = dict(checkpoint['config'])
+        # Preserve historical inference explicitly; do not silently reinterpret old weights.
+        convention = checkpoint.get('gaussian_scale_convention', 'legacy_log_std')
+        cfg['gaussian_scale_convention'] = convention
+        trial_id = (cfg['model'], cfg['dataset'], cfg['seed'], checkpoint['split'])
+        if trial_id in seen:
+            raise ValueError(f'Duplicate trial {trial_id}; do not mix checkpoint generations')
+        seen.add(trial_id)
+        output = options.output/cfg['model']/cfg['dataset']/f"seed{cfg['seed']}_split{checkpoint['split']}"
+        if options.resume and all((output/f).is_file() for f in ['summary.json', 'uq_results.csv', 'calibration.csv', 'predictions.npz']):
+            previous = json.loads((output/'summary.json').read_text())
+            if (previous.get('samples') == options.samples and
+                    previous.get('sampling_seed') == options.seed + int(cfg['seed']) and
+                    previous.get('checkpoint') == str(path.resolve()) and
+                    previous.get('gaussian_scale_convention') == convention and
+                    path.stat().st_mtime <= (output/'summary.json').stat().st_mtime):
+                print('Already complete:', output, flush=True)
+                continue
+        if cfg.get('split_dir') and not Path(cfg['split_dir']).is_dir():
+            local_splits = ROOT/'splits'/Path(cfg['split_dir']).name
+            if not local_splits.is_dir():
+                raise FileNotFoundError(f'Missing checkpoint split directory: {cfg["split_dir"]}')
+            cfg['split_dir'] = str(local_splits)
         torch.manual_seed(options.seed + int(cfg['seed']))
         np.random.seed(options.seed + int(cfg['seed']))
         dataset = get_dataset(cfg['dataset'])
         if cfg.get('evectors', 0):
             dataset = append_top_k_evectors(dataset, cfg['evectors'])
         split = checkpoint['split']
-        data = get_fixed_splits(dataset[0], cfg['dataset'], split, cfg['permute_masks']).to(device)
+        data = get_fixed_splits(dataset[0], cfg['dataset'], split, cfg['permute_masks'], cfg.get('split_dir')).to(device)
         cfg['device'] = device
         model = classes[cfg['model']](data.edge_index, cfg).to(device)
         model.load_state_dict(checkpoint['state_dict'])
         idx = data.test_mask.nonzero(as_tuple=True)[0]
-        stats = predictive_statistics(mc_sample_probs(model, data.x, options.samples, idx))
+        torch.manual_seed(options.seed + int(cfg['seed']))
+        np.random.seed(options.seed + int(cfg['seed']))
+        probabilities = mc_sample_probs(model, data.x, options.samples, idx)
+        stats = predictive_statistics(probabilities)
         true = data.y[idx].cpu().numpy()
         frame = pd.DataFrame(dict(node_idx=idx.cpu().numpy(), true=true, **stats))
         frame['correct'] = (frame.pred == frame.true).astype(int)
         frame['seed'], frame['split'] = cfg['seed'], split
         output = options.output/cfg['model']/cfg['dataset']/f"seed{cfg['seed']}_split{split}"
         output.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(output/'predictions.npz', probabilities=probabilities,
+                            node_idx=idx.cpu().numpy(), true=true)
         frame.to_csv(output/'uq_results.csv', index=False)
         calibration_bins(frame.confidence, frame.correct).to_csv(output/'calibration.csv', index=False)
         summary = dict(seed=cfg['seed'], split=split, samples=options.samples,
+                       gaussian_scale_convention=convention,
                        accuracy=float(frame.correct.mean()),
                        ece=ece_score(frame.confidence, frame.pred, frame.true),
                        checkpoint=str(path.resolve()), sampling_seed=options.seed + int(cfg['seed']))

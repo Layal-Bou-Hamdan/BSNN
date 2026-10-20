@@ -19,6 +19,8 @@ from exp.parser import get_parser
 from models.positional_encodings import append_top_k_evectors
 from models.bayes_disc_models import BayesDiagSheafDiffusion, BayesBundleSheafDiffusion, BayesGeneralSheafDiffusion
 from utils.heterophilic import get_dataset, get_fixed_splits
+from models.registry import MODELS
+from exp.inference import inference_mode, log_probabilities
 
 def reset_wandb_env():
     exclude = {
@@ -49,10 +51,9 @@ def train(model, optimizer, data, config, epoch):
     optimizer.step()
 
 def test(model, data, config):
-    model.eval()
-    with torch.no_grad():
-        if config.bayes_model:
-            probs_list = [torch.exp(model(data.x)[0]) for _ in range(config.num_ensemble)]
+    with inference_mode(model, dropout=getattr(config, 'mc_dropout', False)):
+        if config.bayes_model or getattr(config, 'mc_dropout', False):
+            probs_list = [log_probabilities(model, data.x).exp() for _ in range(config.num_ensemble)]
             probs = torch.mean(torch.stack(probs_list), 0, keepdim=True).squeeze(0)
             logits = torch.log(probs)
             kl = None
@@ -72,8 +73,8 @@ def test(model, data, config):
 def run_exp(config, dataset, model_cls, fold, return_model=False):
     args = dict(config)
     data = dataset[0]
-    fixed_seed = 0
-    data = get_fixed_splits(data, config.dataset, fixed_seed, config.permute_masks).to(config.device)
+    fixed_seed = args.get("split_index", 0) + fold
+    data = get_fixed_splits(data, config.dataset, fixed_seed, config.permute_masks, args.get("split_dir")).to(config.device)
 
     model = model_cls(data.edge_index, args).to(config.device)
     sheaf_params, other_params = model.grouped_parameters()
@@ -120,7 +121,8 @@ def run_exp(config, dataset, model_cls, fold, return_model=False):
     model.load_state_dict(best_state)
 
     wandb.log({'best_test_acc': test_acc, 'best_val_acc': best_val_acc, 'best_epoch': best_epoch})
-    keep_running = False if test_acc < args['min_acc'] else True
+    # Never use test performance to decide which folds enter reported results.
+    keep_running = True
 
     if return_model and args.get("save_model", False):
         save_base = args.get("save_dir", "saved_models")
@@ -128,8 +130,9 @@ def run_exp(config, dataset, model_cls, fold, return_model=False):
         save_dir = os.path.join(save_direct, args['dataset']) 
         os.makedirs(save_dir, exist_ok=True)
         
-        save_path = os.path.join(save_dir, f"{args['dataset']}_{args['model']}_seed{args['seed']}.pt")
+        save_path = os.path.join(save_dir, f"{args['dataset']}_{args['model']}_seed{args['seed']}_split{fixed_seed}.pt")
         torch.save({'state_dict': model.state_dict(),
+                    'format_version': 2, 'gaussian_scale_convention': 'log_variance',
                     'config': {k: str(v) if isinstance(v, torch.device) else v for k, v in args.items()},
                     'split': fixed_seed, 'best_epoch': best_epoch,
                     'best_val_acc': best_val_acc, 'best_val_loss': float(best_val_loss)}, save_path)
@@ -166,11 +169,7 @@ if __name__ == '__main__':
     wandb.init(project="sheaf", config=vars(args), entity=args.entity)
     config = wandb.config
 
-    model_cls_map = {
-        'BayesDiagSheaf': BayesDiagSheafDiffusion,
-        'BayesBundleSheaf': BayesBundleSheafDiffusion,
-        'BayesGeneralSheaf': BayesGeneralSheafDiffusion,
-    }
+    model_cls_map = MODELS
 
     model_cls = model_cls_map.get(config.model)
     if model_cls is None:

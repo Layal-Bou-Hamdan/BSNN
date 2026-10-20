@@ -59,6 +59,8 @@ def get_parser():
     parser.add_argument('--sheaf_use_deg', dest='sheaf_use_deg', type=str2bool, default=False)
     parser.add_argument('--use_kl', dest='use_kl', type=str2bool, default=False)
     parser.add_argument('--num_ensemble', type=int, default=1)
+    parser.add_argument('--mc_dropout', type=str2bool, default=False,
+                        help='Enable functional dropout during inference for deterministic baselines')
 
     # Experiment parameters
     parser.add_argument('--dataset', default='texas')
@@ -97,6 +99,8 @@ def get_parser():
     parser.add_argument("--max_test_steps", type=int, default=100,
                         help="Maximum number steps for the dopri5Early test integrator. "
                              "used if getting OOM errors at test time")
+    parser.add_argument("--split_dir", type=str, default=None, help="Directory containing fixed split masks")
+    parser.add_argument("--split_index", type=int, default=0, help="First split index; subsequent folds use successive splits")
     #UQ arguments
     parser.add_argument('--save_model', action='store_true', help='Save trained model after training')
     parser.add_argument('--save_dir', type=str, default='saved_models', help='Directory to save models')

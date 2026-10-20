@@ -140,6 +140,8 @@ class BayesDiagLaplacianBuilder(LaplacianBuilder):
 
         err = torch.normal(0, 1, size=mean_params.size(), dtype=torch.float, device=std_params.device)
         maps = mean_params + (std_params * err)
+        if getattr(self, 'capture_samples', False):
+            self.sampled_maps = maps.detach()
 
         assert len(maps.size()) == 2
         assert maps.size(1) == self.d
@@ -247,6 +249,8 @@ class BayesNormConnectionLaplacianBuilder(LaplacianBuilder):
         var_maps = self.cayley_transform(var_params.view(var_params.size(0), 1, 1) * self.cayley_transform(rso))
         mean_maps = self.orth_transform(mean_params)
         maps = torch.bmm(var_maps, mean_maps)
+        if getattr(self, 'capture_samples', False):
+            self.sampled_maps = maps.detach()
 
         if edge_weights is None:
             diag_maps = self.deg.unsqueeze(-1)
@@ -326,6 +330,8 @@ class BayesGeneralLaplacianBuilder(LaplacianBuilder):
         err = torch.normal(0, 1, size=mean_params.size(), dtype=torch.float, device=std_params.device)
         maps = mean_params + (std_params * err)
         maps = maps.reshape(maps.size(0), self.d, self.d)
+        if getattr(self, 'capture_samples', False):
+            self.sampled_maps = maps.detach()
 
         left_idx, right_idx = self.left_right_idx
         tril_row, tril_col = self.vertex_tril_idx

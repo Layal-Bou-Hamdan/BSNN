@@ -58,11 +58,11 @@ class BayesDiagSheafDiffusion(SheafDiffusion):
         self.lin2 = nn.Linear(self.hidden_dim, self.output_dim)
 
     def forward(self, x):
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
         if self.second_linear:
             x = self.lin12(x)
@@ -72,7 +72,9 @@ class BayesDiagSheafDiffusion(SheafDiffusion):
         mean_params, log_var_params = self.sheaf_learner(x_maps.reshape(self.graph_size, -1), self.edge_index)
         mean_params = torch.tanh(mean_params)
         log_var_params = -F.elu(-log_var_params)
-        std_params = torch.exp(log_var_params)
+        # v1 checkpoints used exp(log_var), inconsistent with the Gaussian KL.
+        factor = 1.0 if getattr(self, 'legacy_gaussian_scale', False) else 0.5
+        std_params = torch.exp(factor * log_var_params)
 
         kl = self.kldiv(mean_params, log_var_params)
 
@@ -83,7 +85,7 @@ class BayesDiagSheafDiffusion(SheafDiffusion):
 
         x0 = x
         for layer in range(self.layers):
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
             if self.left_weights:
                 x = x.t().reshape(-1, self.final_d)
@@ -198,11 +200,11 @@ class BayesBundleSheafDiffusion(SheafDiffusion):
             Ls.append(L)
 
         # Pass data through network
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
         if self.second_linear:
             x = self.lin12(x)
         x = x.view(self.graph_size * self.final_d, -1)
@@ -210,7 +212,7 @@ class BayesBundleSheafDiffusion(SheafDiffusion):
         x0, L = x, None
         for layer in range(self.layers):
 
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
             x = self.left_right_linear(x, self.lin_left_weights[layer], self.lin_right_weights[layer])
 
             # Use the adjacency matrix rather than the diagonal
@@ -280,11 +282,11 @@ class BayesGeneralSheafDiffusion(SheafDiffusion):
         return x
 
     def forward(self, x):
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
         if self.second_linear:
             x = self.lin12(x)
@@ -294,7 +296,8 @@ class BayesGeneralSheafDiffusion(SheafDiffusion):
         mean_params, log_var_params = self.sheaf_learner(x_maps.reshape(self.graph_size, -1), self.edge_index)
         mean_params = torch.tanh(mean_params)
         log_var_params = -F.elu(-log_var_params)
-        std_params = torch.exp(log_var_params)
+        factor = 1.0 if getattr(self, 'legacy_gaussian_scale', False) else 0.5
+        std_params = torch.exp(factor * log_var_params)
 
         kl = self.kldiv(mean_params, log_var_params)
 
@@ -306,7 +309,7 @@ class BayesGeneralSheafDiffusion(SheafDiffusion):
         x0 = x
         for layer in range(self.layers):
 
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
             x = self.left_right_linear(x, self.lin_left_weights[layer], self.lin_right_weights[layer])
 
             # Use the adjacency matrix rather than the diagonal
@@ -354,18 +357,18 @@ class GCN(SheafDiffusion):
         self.lin2 = nn.Linear(self.hidden_dim, self.output_dim)
 
     def forward(self, x):
-        x = F.dropout(x, p=self.input_dropout, training=self.training)
+        x = F.dropout(x, p=self.input_dropout, training=(self.training or self.mc_dropout))
         x = self.lin1(x)
         if self.use_act:
             x = F.elu(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
         if self.second_linear:
             x = self.lin12(x)
         x = x.view(self.graph_size * self.final_d, -1)
 
         for layer in range(self.layers):
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = F.dropout(x, p=self.dropout, training=(self.training or self.mc_dropout))
 
             if self.left_weights:
                 x = x.t().reshape(-1, self.final_d)

@@ -1,0 +1,16 @@
+{
+  "python": "3.10.19 | packaged by conda-forge | (main, Oct 22 2025, 22:29:10) [GCC 14.3.0]",
+  "packages": {
+    "torch": "2.5.1+cu121",
+    "torch-geometric": "2.7.0",
+    "torch-scatter": "2.1.2+pt25cu121",
+    "torch-sparse": "0.6.18+pt25cu121",
+    "numpy": "2.2.6",
+    "scipy": "1.15.3",
+    "pandas": "2.3.3",
+    "matplotlib": "3.10.7",
+    "wandb": "0.22.3",
+    "GitPython": "3.1.45",
+    "tqdm": "4.67.1"
+  }
+}
